@@ -287,3 +287,61 @@ export const removeConnection = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ success: false, statusCode: 500, message: error.message });
   }
 };
+
+/** POST /api/notes/:id/comments — Add a comment to a note */
+export const addComment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { text } = req.body;
+    if (!text?.trim()) { res.status(400).json({ success: false, statusCode: 400, message: 'Comment text is required' }); return; }
+
+    const note = await Note.findById(req.params.id);
+    if (!note) { res.status(404).json({ success: false, statusCode: 404, message: 'Note not found' }); return; }
+
+    // Optional: check if authorized (owner, shared, or public)
+    if (note.userId.toString() !== req.user.id && !note.sharedWith.includes(req.user.id as any) && !note.isPublic) {
+      res.status(401).json({ success: false, statusCode: 401, message: 'Not authorized' }); return;
+    }
+
+    const User = (await import('../models/User')).default;
+    const author = await User.findById(req.user.id).select('name avatar');
+
+    const newComment = {
+      id: uuidv4(),
+      userId: req.user.id,
+      userName: author?.name || 'Anonymous',
+      userAvatar: author?.avatar || '',
+      text: text.trim(),
+      createdAt: new Date()
+    };
+
+    note.comments.push(newComment);
+    await note.save();
+    
+    res.json({ success: true, statusCode: 200, message: 'Comment added', data: note });
+  } catch (error: any) {
+    res.status(500).json({ success: false, statusCode: 500, message: error.message });
+  }
+};
+
+/** DELETE /api/notes/:id/comments/:commentId — Delete a comment */
+export const deleteComment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const note = await Note.findById(req.params.id);
+    if (!note) { res.status(404).json({ success: false, statusCode: 404, message: 'Note not found' }); return; }
+
+    const comment = note.comments.find(c => c.id === req.params.commentId);
+    if (!comment) { res.status(404).json({ success: false, statusCode: 404, message: 'Comment not found' }); return; }
+
+    // Only the comment author or the note owner can delete the comment
+    if (comment.userId !== req.user.id && note.userId.toString() !== req.user.id) {
+      res.status(401).json({ success: false, statusCode: 401, message: 'Not authorized to delete this comment' }); return;
+    }
+
+    note.comments = note.comments.filter(c => c.id !== req.params.commentId);
+    await note.save();
+    
+    res.json({ success: true, statusCode: 200, message: 'Comment deleted', data: note });
+  } catch (error: any) {
+    res.status(500).json({ success: false, statusCode: 500, message: error.message });
+  }
+};

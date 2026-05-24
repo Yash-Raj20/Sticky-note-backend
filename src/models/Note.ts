@@ -1,5 +1,14 @@
 import mongoose, { Document, Model } from 'mongoose';
 
+export interface INoteComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  text: string;
+  createdAt: Date;
+}
+
 export interface INote extends Document {
   userId: mongoose.Types.ObjectId;
   boardId: mongoose.Types.ObjectId | null;
@@ -18,10 +27,20 @@ export interface INote extends Document {
   attachments: { url: string; type: string; name: string; x?: number; y?: number; width?: number; height?: number }[];
   lastEditedBy: string | null;
   reactions: Record<string, string[]>; // emoji -> array of user names/IDs
+  comments: INoteComment[];
   isFrame: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const noteCommentSchema = new mongoose.Schema({
+  id:        { type: String, required: true },
+  userId:    { type: String, required: true },
+  userName:  { type: String, required: true },
+  userAvatar:{ type: String, default: '' },
+  text:      { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: false });
 
 const noteSchema = new mongoose.Schema(
   {
@@ -57,6 +76,7 @@ const noteSchema = new mongoose.Schema(
     ],
     lastEditedBy: { type: String, default: null },
     reactions: { type: Map, of: [String], default: {} },
+    comments:  { type: [noteCommentSchema], default: [] },
   },
   { timestamps: true }
 );

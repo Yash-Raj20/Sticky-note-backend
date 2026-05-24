@@ -8,6 +8,8 @@ import authRoutes from './routes/authRoutes';
 import noteRoutes from './routes/noteRoutes';
 import boardRoutes from './routes/boardRoutes';
 import uploadRoutes from './routes/uploadRoutes';
+import templateRoutes from './routes/templateRoutes';
+import aiRoutes from './routes/aiRoutes';
 import { initSocketHandlers } from './socketHandler';
 
 dotenv.config();
@@ -34,6 +36,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/', (_req, res) => res.send('API is running...'));
 

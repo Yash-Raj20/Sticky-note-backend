@@ -2,7 +2,7 @@ import express from 'express';
 import { 
   getNotes, getArchivedNotes, getTrashedNotes, getSharedNotes, searchNotes, getTags, 
   createNote, updateNote, deleteNote, shareNote, getSharedNote, shareNoteWithUser,
-  addConnection, removeConnection
+  addConnection, removeConnection, addComment, deleteComment
 } from '../controllers/noteController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -22,6 +22,9 @@ router.post('/:id/share', protect, shareNote);
 router.post('/:id/share-user', protect, shareNoteWithUser);
 router.post('/:id/connect', protect, addConnection);
 router.delete('/:id/connect/:targetId', protect, removeConnection);
+
+router.post('/:id/comments', protect, addComment);
+router.delete('/:id/comments/:commentId', protect, deleteComment);
 router.get('/share/:token', getSharedNote); // Public route
 
 export default router;
