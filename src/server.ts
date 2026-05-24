@@ -17,7 +17,8 @@ const app = express();
 const httpServer = createServer(app);
 
 // --- CORS ---
-const allowedOrigins = [process.env.CLIENT_URL || 'http://localhost:3000'];
+const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
+const allowedOrigins = [clientUrl, 'http://localhost:3000'];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
