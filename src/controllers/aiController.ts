@@ -46,7 +46,7 @@ Return a JSON array of objects. Each object must have a 'title' (short string), 
 
     const text = response.text;
     if (!text) throw new Error('No response from AI');
-    
+
     const notes = JSON.parse(text);
 
     res.status(200).json({ success: true, data: notes });
@@ -81,7 +81,7 @@ ${JSON.stringify(notes)}`;
             type: Type.OBJECT,
             properties: {
               categoryName: { type: Type.STRING },
-              noteIds: { 
+              noteIds: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING }
               }
@@ -94,7 +94,7 @@ ${JSON.stringify(notes)}`;
 
     const text = response.text;
     if (!text) throw new Error('No response from AI');
-    
+
     const categories = JSON.parse(text);
 
     res.status(200).json({ success: true, data: categories });
@@ -236,6 +236,36 @@ ${JSON.stringify(notes)}`;
     const connections = JSON.parse(resultText);
 
     res.status(200).json({ success: true, data: connections });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: getFriendlyErrorMessage(error) });
+  }
+};
+
+export const generateActionPlan = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { notes } = req.body;
+    if (!notes || !Array.isArray(notes) || notes.length === 0) {
+      res.status(400).json({ success: false, message: 'No notes provided' });
+      return;
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const prompt = `Act as an expert Project Manager.
+Analyze the following sticky notes from a brainstorming session:
+${JSON.stringify(notes, null, 2)}
+
+Extract all actionable items, tasks, and decisions. Group them logically.
+Format the output as a clean, structured HTML list using <ul>, <li>, and <strong> tags.
+Keep it concise and actionable. DO NOT wrap the output in markdown blocks. Return only HTML.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+
+    let actionPlan = (response.text || '').replace(/```html|```/g, '').trim();
+
+    res.status(200).json({ success: true, data: { actionPlan } });
   } catch (error: any) {
     res.status(500).json({ success: false, message: getFriendlyErrorMessage(error) });
   }
