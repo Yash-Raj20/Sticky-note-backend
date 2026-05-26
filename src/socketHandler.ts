@@ -48,12 +48,13 @@ export const initSocketHandlers = (io: Server) => {
     });
 
     // --- Cursor move (broadcast to room, not self) ---
-    socket.on('cursor-move', ({ boardId, x, y }: { boardId: string; x: number; y: number }) => {
+    socket.on('cursor-move', ({ boardId, x, y, isLaser }: { boardId: string; x: number; y: number; isLaser?: boolean }) => {
       socket.to(`board:${boardId}`).emit('remote-cursor', {
         userId: socket.userId,
         name: socket.userName,
         x,
         y,
+        isLaser,
       });
     });
 

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import sendEmail from '../utils/sendEmail';
+import { getForgotPasswordEmailTemplate } from '../utils/emailTemplates';
 
 const generateToken = (id: string, name: string, email: string) => {
   return jwt.sign({ id, name, email }, process.env.JWT_SECRET || 'secret', { expiresIn: '30d' });
@@ -75,9 +77,9 @@ export const updateProfile = async (req: Request | any, res: Response): Promise<
     }
     if (name) user.name = name;
     if (avatar !== undefined) user.avatar = avatar;
-    
+
     await user.save();
-    
+
     res.json({
       success: true,
       statusCode: 200,
@@ -105,18 +107,40 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
     const crypto = await import('crypto');
     const resetToken = crypto.randomBytes(20).toString('hex');
-    
+
     user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     await user.save();
 
-    res.status(200).json({ 
-      success: true, 
-      statusCode: 200, 
-      message: 'Reset token generated successfully.',
-      data: { resetToken } 
-    });
+    // Create reset URL
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+    // Generate HTML template
+    const htmlTemplate = getForgotPasswordEmailTemplate(user.name, resetUrl);
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Password Reset Request',
+        message: `You requested a password reset. Please go to this link to reset your password: ${resetUrl}`,
+        html: htmlTemplate
+      });
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Password reset email sent successfully.'
+      });
+    } catch (emailError) {
+      // If email fails, clear the reset token so they can try again
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+
+      console.error('Error sending reset email:', emailError);
+      res.status(500).json({ success: false, statusCode: 500, message: 'Email could not be sent' });
+    }
   } catch (error: any) {
     res.status(500).json({ success: false, statusCode: 500, message: error.message });
   }
@@ -141,7 +165,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     user.passwordHash = await bcrypt.hash(req.body.password, salt);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
-    
+
     await user.save();
 
     res.status(200).json({

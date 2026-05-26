@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import Note from '../models/Note';
 import User from '../models/User';
+import Board from '../models/Board';
 import { v4 as uuidv4 } from 'uuid';
+import sendEmail from '../utils/sendEmail';
+import { getShareNoteEmailTemplate } from '../utils/emailTemplates';
 
 interface AuthRequest extends Request {
   user?: any;
@@ -10,14 +13,26 @@ interface AuthRequest extends Request {
 export const getNotes = async (req: AuthRequest, res: Response) => {
   try {
     const { boardId } = req.query;
-    const filter: Record<string, any> = {
-      userId: req.user.id,
+    let filter: Record<string, any> = {
       isArchived: { $ne: true },
       isTrashed: { $ne: true },
     };
-    // If boardId is provided, filter by it; otherwise null (default board)
-    if (boardId) filter.boardId = boardId;
-    else filter.boardId = null;
+
+    // If boardId is provided, check if user owns it or if it's shared with them
+    if (boardId) {
+      const board = await Board.findById(boardId);
+      if (board && (board.userId.toString() === req.user.id || board.sharedWith.includes(req.user.id))) {
+        // User has access to the board, so they can see all notes inside it
+        filter.boardId = boardId;
+      } else {
+        // Fallback: only their own notes
+        filter.userId = req.user.id;
+        filter.boardId = boardId;
+      }
+    } else {
+      filter.userId = req.user.id;
+      filter.boardId = null;
+    }
 
     const notes = await Note.find(filter).populate('sharedWith', 'name email');
     res.json({ success: true, statusCode: 200, message: 'Notes retrieved successfully', data: notes });
@@ -99,11 +114,18 @@ export const updateNote = async (req: AuthRequest, res: Response): Promise<void>
       res.status(404).json({ success: false, statusCode: 404, message: 'Note not found' });
       return;
     }
-    if (
-      note.userId.toString() !== req.user.id && 
-      !note.sharedWith.includes(req.user.id as any) &&
-      !note.isPublic // If it's public (shared via link), anyone logged in can update it (or we can restrict to just sharedWith)
-    ) {
+    // Only note owner OR board collaborator can edit
+    // Individually shared notes (note.sharedWith) are VIEW-ONLY — no edit allowed
+    const isNoteOwner = note.userId.toString() === req.user.id;
+    let isBoardCollaborator = false;
+    if (!isNoteOwner && note.boardId) {
+      const board = await Board.findById(note.boardId);
+      if (board && board.sharedWith.includes(req.user.id as any)) {
+        isBoardCollaborator = true;
+      }
+    }
+
+    if (!isNoteOwner && !isBoardCollaborator) {
       res.status(401).json({ success: false, statusCode: 401, message: 'User not authorized' });
       return;
     }
@@ -244,6 +266,29 @@ export const shareNoteWithUser = async (req: AuthRequest, res: Response): Promis
     
     note.sharedWith.push(targetUser._id);
     await note.save();
+    
+    // Send Email Notification
+    try {
+      const sender = await User.findById(req.user.id);
+      const senderName = sender ? sender.name : 'Someone';
+      
+      const htmlTemplate = getShareNoteEmailTemplate(
+        targetUser.name,
+        senderName,
+        note.title,
+        note.content,
+        note.color
+      );
+      
+      await sendEmail({
+        email: targetUser.email,
+        subject: `${senderName} shared a note with you: "${note.title}"`,
+        message: `Hello ${targetUser.name}, ${senderName} has shared a note titled "${note.title}" with you. Log in to your dashboard to view it.`,
+        html: htmlTemplate
+      });
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+    }
     
     // Populate the newly added user before returning
     await note.populate('sharedWith', 'name email');
