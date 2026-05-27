@@ -116,6 +116,8 @@ export const shareBoardWithUser = async (req: AuthRequest, res: Response): Promi
     await board.save();
     
     // Send Email Notification
+    let emailSent = true;
+    let emailErrorMsg = '';
     try {
       const sender = await User.findById(req.user.id);
       const senderName = sender ? sender.name : 'Someone';
@@ -124,7 +126,8 @@ export const shareBoardWithUser = async (req: AuthRequest, res: Response): Promi
         targetUser.name,
         senderName,
         board.name,
-        board.emoji
+        board.emoji,
+        board._id.toString()
       );
       
       await sendEmail({
@@ -133,13 +136,28 @@ export const shareBoardWithUser = async (req: AuthRequest, res: Response): Promi
         message: `Hello ${targetUser.name}, ${senderName} has shared a board titled "${board.name}" with you.`,
         html: htmlTemplate
       });
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error('Error sending email:', emailError);
+      emailSent = false;
+      emailErrorMsg = emailError.message || 'Unknown email error';
     }
     
     await board.populate('sharedWith', 'name email');
+    
+    if (!emailSent) {
+      res.status(207).json({ 
+        success: true, 
+        statusCode: 207, 
+        message: 'Board shared successfully, but failed to send email notification.', 
+        error: emailErrorMsg,
+        data: board 
+      });
+      return;
+    }
+
     res.json({ success: true, statusCode: 200, message: 'Board shared successfully', data: board });
   } catch (error: any) {
     res.status(500).json({ success: false, statusCode: 500, message: error.message });
   }
 };
+

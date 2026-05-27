@@ -780,7 +780,8 @@ export const getShareBoardEmailTemplate = (
   receiverName: string,
   senderName: string,
   boardName: string,
-  boardEmoji: string
+  boardEmoji: string,
+  boardId: string
 ) => {
   return `
 <!DOCTYPE html>
@@ -842,7 +843,7 @@ export const getShareBoardEmailTemplate = (
     </div>
     <!-- BUTTON -->
     <div class="cta-wrapper">
-      <a href="${process.env.CLIENT_URL}" class="btn">Open Shared Board 👀</a>
+      <a href="${process.env.CLIENT_URL}/board?boardId=${boardId}" class="btn">Open Shared Board 👀</a>
     </div>
   </div>
   <!-- FOOTER -->
