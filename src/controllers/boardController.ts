@@ -131,7 +131,11 @@ export const shareBoardWithUser = async (req: AuthRequest, res: Response): Promi
         console.error('Error preparing invite email:', err);
       }
 
-      res.json({ success: true, statusCode: 200, message: 'Invite sent to unregistered user successfully', data: board });
+      const populatedBoard = await Board.findById(board._id)
+        .populate('userId', 'name email avatar')
+        .populate('sharedWith', 'name email avatar');
+
+      res.json({ success: true, statusCode: 200, message: 'Invite sent to unregistered user successfully', data: populatedBoard });
       return;
     }
     
