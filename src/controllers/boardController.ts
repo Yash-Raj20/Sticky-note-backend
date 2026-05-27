@@ -115,9 +115,7 @@ export const shareBoardWithUser = async (req: AuthRequest, res: Response): Promi
     board.sharedWith.push(targetUser._id);
     await board.save();
     
-    // Send Email Notification
-    let emailSent = true;
-    let emailErrorMsg = '';
+    // Send Email Notification in the background (fire-and-forget)
     try {
       const sender = await User.findById(req.user.id);
       const senderName = sender ? sender.name : 'Someone';
@@ -130,31 +128,20 @@ export const shareBoardWithUser = async (req: AuthRequest, res: Response): Promi
         board._id.toString()
       );
       
-      await sendEmail({
+      // Do not await this, let it run in the background
+      sendEmail({
         email: targetUser.email,
         subject: `${senderName} shared a board with you: "${board.name}"`,
         message: `Hello ${targetUser.name}, ${senderName} has shared a board titled "${board.name}" with you.`,
         html: htmlTemplate
+      }).catch((emailError) => {
+        console.error('Background email sending failed:', emailError);
       });
-    } catch (emailError: any) {
-      console.error('Error sending email:', emailError);
-      emailSent = false;
-      emailErrorMsg = emailError.message || 'Unknown email error';
+    } catch (err) {
+      console.error('Error preparing email:', err);
     }
     
     await board.populate('sharedWith', 'name email');
-    
-    if (!emailSent) {
-      res.status(207).json({ 
-        success: true, 
-        statusCode: 207, 
-        message: 'Board shared successfully, but failed to send email notification.', 
-        error: emailErrorMsg,
-        data: board 
-      });
-      return;
-    }
-
     res.json({ success: true, statusCode: 200, message: 'Board shared successfully', data: board });
   } catch (error: any) {
     res.status(500).json({ success: false, statusCode: 500, message: error.message });
