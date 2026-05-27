@@ -22,6 +22,19 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 
     const user = await User.create({ name, email, passwordHash });
     if (user) {
+      // Check if this new user was invited to any boards
+      try {
+        const Board = (await import('../models/Board')).default;
+        const invitedBoards = await Board.find({ invitedEmails: email.toLowerCase() });
+        for (const board of invitedBoards) {
+          board.sharedWith.push(user._id);
+          board.invitedEmails = board.invitedEmails.filter(e => e !== email.toLowerCase());
+          await board.save();
+        }
+      } catch (inviteErr) {
+        console.error('Error processing board invites during registration:', inviteErr);
+      }
+
       res.status(201).json({
         success: true,
         statusCode: 201,

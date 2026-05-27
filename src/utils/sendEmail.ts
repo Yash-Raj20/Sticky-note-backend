@@ -1,5 +1,3 @@
-import nodemailer from 'nodemailer';
-
 interface EmailOptions {
   email: string;
   subject: string;
@@ -8,28 +6,34 @@ interface EmailOptions {
 }
 
 const sendEmail = async (options: EmailOptions) => {
-  // 1. Create transporter
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+  // Use Brevo (Sendinblue) HTTP API which is completely free and works without a custom domain.
+  const apiKey = process.env.BREVO_API_KEY;
+  
+  if (!apiKey) {
+    console.error("BREVO_API_KEY is missing in environment variables");
+    return;
+  }
+
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     },
+    body: JSON.stringify({
+      sender: { name: 'Sticky Notes', email: process.env.EMAIL_USER || 'hello@stickynotes.com' },
+      to: [{ email: options.email }],
+      subject: options.subject,
+      textContent: options.message,
+      htmlContent: options.html,
+    })
   });
 
-  // 2. Define email options
-  const mailOptions = {
-    from: `Sticky Notes App <${process.env.EMAIL_USER}>`,
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    html: options.html,
-  };
-
-  // 3. Send email
-  await transporter.sendMail(mailOptions);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to send email via Brevo');
+  }
 };
 
 export default sendEmail;

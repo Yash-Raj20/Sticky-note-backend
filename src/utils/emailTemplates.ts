@@ -856,3 +856,84 @@ export const getShareBoardEmailTemplate = (
 </html>
   `;
 };
+
+export const getInviteBoardEmailTemplate = (
+  receiverEmail: string,
+  senderName: string,
+  boardName: string,
+  boardEmoji: string,
+  boardId: string
+) => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body { margin: 0; padding: 30px 15px; background: #f8fafc; font-family: 'Segoe UI', sans-serif; color: #0f172a; }
+    .wrapper { max-width: 640px; margin: auto; background: #ffffff; border-radius: 28px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 20px 50px rgba(0,0,0,0.08), 0 8px 20px rgba(0,0,0,0.05); }
+    .header { position: relative; overflow: hidden; padding: 55px 30px 120px; text-align: center; background: linear-gradient(135deg, #02462E 0%, #013220 100%); }
+    .header::before { content: ''; position: absolute; width: 300px; height: 300px; background: rgba(255,255,255,0.05); border-radius: 50%; top: -120px; left: -100px; }
+    .header::after { content: ''; position: absolute; width: 240px; height: 240px; background: rgba(254,199,0,0.08); border-radius: 50%; bottom: -120px; right: -80px; }
+    .logo { width: 90px; height: 90px; margin: auto; border-radius: 24px; background: linear-gradient(135deg, #FEC700, #ffdf5d); display: flex; align-items: center; justify-content: center; font-size: 42px; box-shadow: 0 15px 30px rgba(0,0,0,0.25); animation: float 4s ease-in-out infinite; }
+    @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } }
+    .header h1 { color: white; margin-top: 20px; margin-bottom: 10px; font-size: 36px; font-weight: 700; letter-spacing: 0.5px; }
+    .header p { color: white; font-size: 18px; }
+    .content { padding: 45px 38px; }
+    .badge { display: inline-block; padding: 8px 18px; border-radius: 999px; background: rgba(254,199,0,0.15); color: #02462E; font-size: 13px; font-weight: 700; margin-bottom: 24px; }
+    .content h2 { margin-top: 0; color: #02462E; font-size: 28px; margin-bottom: 20px; }
+    .content p { font-size: 16px; line-height: 1.8; color: #475569; }
+    .board-card { margin: 35px 0; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 24px; padding: 30px; text-align: center; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+    .board-emoji { font-size: 48px; margin-bottom: 15px; }
+    .board-name { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }
+    .info-box { margin-top: 30px; padding: 24px; border-radius: 22px; background: linear-gradient(135deg, rgba(254,199,0,0.12), rgba(2,70,46,0.06)); border: 1px solid rgba(2,70,46,0.08); }
+    .info-box h3 { margin-top: 0; margin-bottom: 12px; font-size: 22px; color: #02462E; }
+    .info-box p { margin: 0; font-size: 16px; line-height: 1.9; color: #334155; }
+    .cta-wrapper { text-align: center; margin-top: 40px; }
+    .btn { display: inline-block; padding: 18px 34px; border-radius: 18px; text-decoration: none; color: white !important; font-weight: 700; font-size: 16px; background: linear-gradient(135deg, #02462E, #046c48); box-shadow: 0 15px 30px rgba(2,70,46,0.25); transition: all .3s ease; }
+    .btn:hover { transform: translateY(-3px); }
+    .footer { padding: 28px; text-align: center; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+    .footer p { margin: 5px 0; color: #64748b; font-size: 13px; }
+    @media only screen and (max-width: 600px) { .content { padding: 35px 22px; } .header { padding: 45px 20px 110px; } .header h1 { font-size: 28px; } .content h2 { font-size: 24px; } }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">📋</div>
+    <h1>Sticky Notes</h1>
+    <p>Collaborate beautifully, organize instantly.</p>
+  </div>
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="badge">✨ Private Invitation</div>
+    <h2>Welcome! 👋</h2>
+    <p><strong>${senderName}</strong> has invited you to collaborate on a board in <strong>Sticky Notes</strong>.</p>
+    
+    <!-- BOARD CARD -->
+    <div class="board-card">
+      <div class="board-emoji">${boardEmoji}</div>
+      <h3 class="board-name">${boardName}</h3>
+    </div>
+    <!-- URGENCY SECTION -->
+    <div class="info-box">
+      <h3>🚀 Quick Setup Required</h3>
+      <p>Since you don't have an account yet, please create a free account to view this board. It only takes a few seconds!</p>
+    </div>
+    <!-- BUTTON -->
+    <div class="cta-wrapper">
+      <a href="${process.env.CLIENT_URL}/register?boardId=${boardId}" class="btn">Create Account & View Board</a>
+    </div>
+  </div>
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>This is an automated email from Sticky Notes. Developed by ❤️ Ratnesh</p>
+    <p>© 2026 Sticky Notes — Designed for productivity.</p>
+  </div>
+</div>
+</body>
+</html>
+  `;
+};

@@ -3,7 +3,7 @@ import Board from '../models/Board';
 import Note from '../models/Note';
 import User from '../models/User';
 import sendEmail from '../utils/sendEmail';
-import { getShareBoardEmailTemplate } from '../utils/emailTemplates';
+import { getShareBoardEmailTemplate, getInviteBoardEmailTemplate } from '../utils/emailTemplates';
 
 interface AuthRequest extends Request {
   user?: any;
@@ -98,7 +98,40 @@ export const shareBoardWithUser = async (req: AuthRequest, res: Response): Promi
     
     const targetUser = await User.findOne({ email });
     if (!targetUser) {
-      res.status(404).json({ success: false, statusCode: 404, message: 'User with this email not found' });
+      // User is not registered yet. Add to invitedEmails and send an invite email.
+      if (board.invitedEmails && board.invitedEmails.includes(email.toLowerCase())) {
+        res.status(400).json({ success: false, statusCode: 400, message: 'An invite has already been sent to this email' });
+        return;
+      }
+
+      if (!board.invitedEmails) board.invitedEmails = [];
+      board.invitedEmails.push(email.toLowerCase());
+      await board.save();
+
+      // Send Invite Email Notification
+      try {
+        const sender = await User.findById(req.user.id);
+        const senderName = sender ? sender.name : 'Someone';
+        
+        const inviteHtml = getInviteBoardEmailTemplate(
+          email,
+          senderName,
+          board.name,
+          board.emoji,
+          board._id.toString()
+        );
+
+        sendEmail({
+          email: email,
+          subject: `${senderName} invited you to join Sticky Notes!`,
+          message: `Hello, ${senderName} invited you to view the board "${board.name}". Please sign up at ${process.env.CLIENT_URL}/register?boardId=${board._id} to view it.`,
+          html: inviteHtml
+        }).catch((err) => console.error('Background invite email failed:', err));
+      } catch (err) {
+        console.error('Error preparing invite email:', err);
+      }
+
+      res.json({ success: true, statusCode: 200, message: 'Invite sent to unregistered user successfully', data: board });
       return;
     }
     

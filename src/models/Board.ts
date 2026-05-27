@@ -5,6 +5,7 @@ export interface IBoard extends Document {
   emoji: string;
   userId: mongoose.Types.ObjectId;
   sharedWith: mongoose.Types.ObjectId[];
+  invitedEmails: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +16,7 @@ const boardSchema = new mongoose.Schema(
     emoji: { type: String, default: '📋' },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    invitedEmails: [{ type: String, lowercase: true, trim: true }],
   },
   { timestamps: true }
 );
